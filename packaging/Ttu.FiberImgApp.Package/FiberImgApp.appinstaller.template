@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppInstaller
+    Uri="{{APPINSTALLER_URI}}FiberImgApp.appinstaller"
+    Version="{{VERSION}}"
+    xmlns="http://schemas.microsoft.com/appx/appinstaller/2018">
+  <MainPackage
+      Name="TTU.FiberImgApp"
+      Publisher="CN=TTU"
+      Version="{{VERSION}}"
+      Uri="{{APPINSTALLER_URI}}Ttu.FiberImgApp.msix"
+      ProcessorArchitecture="x64" />
+  <UpdateSettings>
+    <OnLaunch HoursBetweenUpdateChecks="0" ShowPrompt="true" UpdateBlocksActivation="false" />
+    <AutomaticBackgroundTask />
+  </UpdateSettings>
+</AppInstaller>

@@ -1,0 +1,8 @@
+{
+  "Zen": {
+    "ApiToken": "PUT-TOKEN-HERE-DO-NOT-COMMIT"
+  },
+  "Thorlabs": {
+    "DeviceId": ""
+  }
+}

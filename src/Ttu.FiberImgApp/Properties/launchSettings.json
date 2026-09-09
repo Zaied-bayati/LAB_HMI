@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ttu.FiberImgApp (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Ttu.FiberImgApp (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

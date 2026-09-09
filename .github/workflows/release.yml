@@ -1,0 +1,152 @@
+##
+# Builds, signs, and publishes Fiber Img App MSIX + App Installer to GitHub Releases.
+# Trigger: git tag v0.1.0  OR  workflow_dispatch with version input.
+#
+# Required repo secrets:
+#   MSIX_CERT_BASE64   — Base64-encoded .pfx (CN=TTU)
+#   MSIX_CERT_PASSWORD — PFX password
+#
+# Before first use, replace YOUR_GITHUB_USER in appsettings / template defaults,
+# or set repository variable APPINSTALLER_BASE_URL.
+##
+name: Release MSIX
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version (e.g. 0.1.0.0)"
+        required: true
+        default: "0.1.0.0"
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+  CONFIGURATION: Release
+  PLATFORM: x64
+  SOLUTION: Ttu.FiberImgApp.sln
+  APP_PROJECT: src/Ttu.FiberImgApp/Ttu.FiberImgApp.csproj
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $v = "${{ inputs.version }}"
+          } else {
+            $tag = "${{ github.ref_name }}"
+            $v = $tag.TrimStart("v")
+            if ($v -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+              if ($v -match '^\d+\.\d+\.\d+$') { $v = "$v.0" }
+              else { throw "Tag must be like v0.1.0 or v0.1.0.0 (got $tag)" }
+            }
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Package version: $v"
+
+      - name: Decode signing certificate
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String("${{ secrets.MSIX_CERT_BASE64 }}")
+          $path = Join-Path $env:RUNNER_TEMP "FiberImgApp.pfx"
+          [IO.File]::WriteAllBytes($path, $bytes)
+          "PFX_PATH=$path" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Update Package.appxmanifest version
+        shell: pwsh
+        run: |
+          $manifest = "src/Ttu.FiberImgApp/Package.appxmanifest"
+          [xml]$xml = Get-Content $manifest
+          $xml.Package.Identity.Version = "${{ steps.ver.outputs.version }}"
+          $xml.Save((Resolve-Path $manifest))
+
+      - name: Build
+        run: >
+          dotnet build ${{ env.APP_PROJECT }}
+          -c ${{ env.CONFIGURATION }}
+          -p:Platform=${{ env.PLATFORM }}
+          -p:RuntimeIdentifier=win-x64
+          --no-restore
+
+      - name: Publish (win-x64)
+        run: >
+          dotnet publish ${{ env.APP_PROJECT }}
+          -c ${{ env.CONFIGURATION }}
+          -p:Platform=${{ env.PLATFORM }}
+          -p:RuntimeIdentifier=win-x64
+          -p:PublishReadyToRun=true
+          -p:GenerateAppxPackageOnBuild=true
+          -p:AppxPackageSigningEnabled=true
+          -p:PackageCertificateKeyFile=${{ env.PFX_PATH }}
+          -p:PackageCertificatePassword=${{ secrets.MSIX_CERT_PASSWORD }}
+          -p:AppxBundle=Never
+          -p:UapAppxPackageBuildMode=SideLoadOnly
+          -o artifacts/publish
+
+      - name: Collect MSIX and generate AppInstaller
+        shell: pwsh
+        run: |
+          $version = "${{ steps.ver.outputs.version }}"
+          $repo = "${{ github.repository }}"
+          $baseUrl = "${{ vars.APPINSTALLER_BASE_URL }}"
+          if ([string]::IsNullOrWhiteSpace($baseUrl)) {
+            $baseUrl = "https://github.com/$repo/releases/latest/download/"
+          }
+          if (-not $baseUrl.EndsWith("/")) { $baseUrl += "/" }
+
+          New-Item -ItemType Directory -Force -Path artifacts/release | Out-Null
+          $msix = Get-ChildItem -Path . -Recurse -Filter *.msix -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '\\obj\\' } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          if (-not $msix) {
+            Write-Warning "No .msix produced by publish. Looking under AppPackages..."
+            $msix = Get-ChildItem -Path . -Recurse -Filter *.msix -ErrorAction SilentlyContinue |
+              Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          }
+
+          if (-not $msix) {
+            throw "MSIX not found. Ensure Windows SDK / MSIX tooling is available on the runner and GenerateAppxPackageOnBuild succeeded."
+          }
+
+          Copy-Item $msix.FullName "artifacts/release/Ttu.FiberImgApp.msix" -Force
+
+          $template = Get-Content "packaging/Ttu.FiberImgApp.Package/FiberImgApp.appinstaller.template" -Raw
+          $appinstaller = $template `
+            -replace '\{\{VERSION\}\}', $version `
+            -replace '\{\{APPINSTALLER_URI\}\}', $baseUrl
+          Set-Content -Path "artifacts/release/FiberImgApp.appinstaller" -Value $appinstaller -Encoding utf8
+
+          Get-ChildItem artifacts/release | Format-Table Name, Length
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', steps.ver.outputs.version) || github.ref_name }}
+          name: Fiber Img App ${{ steps.ver.outputs.version }}
+          generate_release_notes: true
+          files: artifacts/release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
