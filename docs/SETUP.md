@@ -64,15 +64,15 @@ git init
 git add .
 git commit -m "Initial Fiber Img App skeleton"
 git branch -M main
-git remote add origin https://github.com/YOUR_GITHUB_USER/ttu-fiber-img-app.git
+git remote add origin https://github.com/Zaied-bayati/ttu-fiber-img-app.git
 git push -u origin main
 ```
 
-3. Replace `YOUR_GITHUB_USER` in:
-   - `src/Ttu.FiberImgApp/appsettings.json` → `Updates:AppInstallerUri`
-   - `src/Ttu.FiberImgApp/Ttu.FiberImgApp.csproj` → `AppInstallerUri`
-   - Or set repo **variable** `APPINSTALLER_BASE_URL` to  
-     `https://github.com/YOUR_GITHUB_USER/ttu-fiber-img-app/releases/latest/download/`
+3. App Installer URIs already use `Zaied-bayati/ttu-fiber-img-app`. Optional: set repo **variable** `APPINSTALLER_BASE_URL` to  
+   `https://github.com/Zaied-bayati/ttu-fiber-img-app/releases/latest/download/`
+
+   If `origin` already exists with a wrong URL:
+   `git remote set-url origin https://github.com/Zaied-bayati/ttu-fiber-img-app.git`
 
 4. After Phase 3, add Actions **secrets**:
    - `MSIX_CERT_BASE64`
@@ -188,7 +188,7 @@ Or run **Release MSIX** via Actions → **workflow_dispatch** and enter `0.1.0.0
 2. Install **`FiberImgApp.cer`** into **Trusted People** (and Root if needed) using `Import-MsixTrustCert.ps1` or Certificate Manager.
 3. Open the Release **`FiberImgApp.appinstaller`** URL in the browser (do not only copy a lone `.msix` if you want auto-updates). Example:
 
-   `https://github.com/YOUR_GITHUB_USER/ttu-fiber-img-app/releases/latest/download/FiberImgApp.appinstaller`
+   `https://github.com/Zaied-bayati/ttu-fiber-img-app/releases/latest/download/FiberImgApp.appinstaller`
 
 4. Complete App Installer UI → launch **Fiber Img App**.
 5. After the next tagged release, relaunch the app and confirm the update prompt/apply.

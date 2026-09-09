@@ -20,7 +20,7 @@
     <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
     <AppxBundle>Never</AppxBundle>
     <AppxPackageDir>$(MSBuildThisFileDirectory)..\..\artifacts\msix\</AppxPackageDir>
-    <AppInstallerUri>https://github.com/YOUR_GITHUB_USER/ttu-fiber-img-app/releases/latest/download/</AppInstallerUri>
+    <AppInstallerUri>https://github.com/Zaied-bayati/ttu-fiber-img-app/releases/latest/download/</AppInstallerUri>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
 

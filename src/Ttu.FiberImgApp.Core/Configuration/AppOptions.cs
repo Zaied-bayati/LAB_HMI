@@ -22,7 +22,7 @@ public sealed class UpdatesOptions
     public const string SectionName = "Updates";
 
     public string AppInstallerUri { get; set; } =
-        "https://github.com/YOUR_GITHUB_USER/ttu-fiber-img-app/releases/latest/download/";
+        "https://github.com/Zaied-bayati/ttu-fiber-img-app/releases/latest/download/";
 }
 
 public sealed class DatabaseOptions
